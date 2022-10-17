@@ -5,6 +5,7 @@ from scrapy.crawler import CrawlerProcess
 from scrapy.settings import Settings
 
 from .mirror_spider import MirrorSpider
+from .proxy_middleware import ProxyMiddleware
 
 
 def main():
@@ -17,6 +18,7 @@ def main():
         'deny': args.deny,
         'unix': args.unix,
     }
+    ProxyMiddleware.connection_string = args.proxy
     settings = Settings({
         'USER_AGENT': (
             'Wayback Machine Scraper/{0} '
@@ -24,6 +26,7 @@ def main():
         ).format(get_distribution('wayback-machine-scraper').version),
         'LOG_LEVEL': 'DEBUG' if args.verbose else 'INFO',
         'DOWNLOADER_MIDDLEWARES': {
+            'wayback_machine_scraper.proxy_middleware.ProxyMiddleware': 2,
             'scrapy_wayback_machine.WaybackMachineMiddleware': 5,
         },
         'AUTOTHROTTLE_ENABLED': True,
@@ -68,16 +71,21 @@ def parse_args():
         'A regular expression to exclude matched URLs.'
     ))
     parser.add_argument('-c', '--concurrency', default=10.0, help=(
-        'Target concurrency for crawl requests.'
-        'The crawl rate will be automatically adjusted to match this target.'
+        'Target concurrency for crawl requests. '
+        'The crawl rate will be automatically adjusted to match this target. '
         'Use values less than 1 to be polite and higher values to scrape more quickly.'
     ))
     parser.add_argument('-u', '--unix', action='store_true', help=(
         'Save snapshots as `UNIX_TIMESTAMP.snapshot` instead of '
         'the default `YYYYmmddHHMMSS.snapshot`.'
     ))
+    parser.add_argument('-p', '--proxy', default=None, help=(
+        'Specify a HTTP proxy to use. '
+        'Provide a connection string.'
+    ))
     parser.add_argument('-v', '--verbose', action='store_true', help=(
         'Turn on debug logging.'
     ))
+    parser.add_argument('--version', action='version', version='%(prog)s ' + get_distribution('wayback-machine-scraper').version)
 
     return parser.parse_args()
